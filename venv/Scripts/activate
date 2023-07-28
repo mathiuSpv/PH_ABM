@@ -38,7 +38,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="C:\Users\pomaredam\Desktop\Python Workspace\PH_amb\venv"
+VIRTUAL_ENV="C:\Users\mathi\Desktop\Programs\Python\PH_amb\PH_amb\venv"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"
