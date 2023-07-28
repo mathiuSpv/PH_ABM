@@ -1,2 +1,2 @@
-sqlachemy==2.0.19
+sqlalchemy==2.0.19
 pyinstaller==5.13.0
