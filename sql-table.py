@@ -46,87 +46,137 @@ class Ingredients(Base):
 
 
 class DBManager:
-    def __init__(self, session: orm.session.Session):
-        self.session = session
+    def __init__(self, session_local: orm.session.Session):
+        self.session = session_local
+
+    def query_get_recipe(self, recipe_name: str):
+        """Retorna el elemento de la tabla Recipes"""
+        try:
+            recipe = self.session.query(Recipes).filter_by(name=recipe_name.capitalize()).first()
+            if recipe:
+                return recipe
+            return False
+        except Exception as e:
+            print(e)
+            return False
+
+    def query_get_ingredient(self, ingredient_name: str):
+        """Retorna el elemento de la tabla Ingredients"""
+        try:
+            ingredient = self.session.query(Ingredients).filter_by(name=ingredient_name.capitalize()).first()
+            if ingredient:
+                return ingredient
+            return False
+        except Exception as e:
+            print(e)
+            return False
+
+    def query_get_rw2recipe(self, recipe_name: str, ingredient_name: str, return_as_bucket: bool = False):
+        """Retorna un elemento de la tabla RecipeIngredients, puede retornar tambien sus elementos Recipe y Ingredients
+        con el parametro return_as_bucket"""
+        try:
+            recipe = self.query_get_recipe(recipe_name)
+            ingredient = self.query_get_ingredient(ingredient_name)
+            recipe_ingredients = self.session.query(RecipeIngredients).filter_by(recipe_id=recipe.id,
+                                                                                 ingredient_id=ingredient.id).first()
+            if recipe_ingredients:
+                if return_as_bucket:
+                    return recipe, ingredient, recipe_ingredients
+                return recipe_ingredients
+            return False
+        except Exception as e:
+            print(e)
+            return False
+
+    def query_all_recipes(self):
+        return self.session.query(Recipes).all()
+
+    def query_all_ingredients(self):
+        return self.session.query(Ingredients).all()
+
+    def query_all_rw2recipes(self):
+        return self.session.query(RecipeIngredients).all()
 
     def add_recipe(self, recipe_name: str, its_ingredients: list):
         """Creamos una receta nueva este debe entregar una lista de ingredientes tipo tupla,
          uno su nombre y en la otra su cantidad"""
-        recipe = self.session.query(Recipes).filter_by(name=recipe_name.capitalize()).first()
-        if not recipe:  # Entra si no existe recipe
-            new_recipe = Recipes(name=recipe_name.capitalize())
-            self.session.add(new_recipe)
+        if self.query_get_recipe(recipe_name):# Entra si no existe recipe
+            recipe = Recipes(name=recipe_name)
+            self.session.add(recipe)
             for ingredient_name, amount in its_ingredients:
-                ingredient = self.session.query(Ingredients).filter_by(name=ingredient_name.capitalize()).first()
-                if ingredient:
-                    ingredient2recipe = RecipeIngredients(recipe_id=new_recipe.id, ingredient_id=ingredient.id,
-                                                          amount=amount)
+                ingredient2recipe = self.query_get_rw2recipe(recipe_name, ingredient_name)
+                if not ingredient2recipe:
+                    ingredient = self.query_get_ingredient(ingredient_name)
+                    ingredient2recipe = RecipeIngredients(recipe_id=recipe.id, ingredient_id=ingredient.id)
+                    ingredient2recipe.amount = amount if isinstance(amount, float) and amount > 0 else None
                     self.session.add(ingredient2recipe)
-            self.session.commit()
+                    self.session.commit()
 
     def delete_recipe(self, recipe_name: str):
         """Elimina una receta por completo y toda su relacion"""
-        recipe = self.session.query(Recipes).filter_by(name=recipe_name.capitalize()).first()
+        recipe = self.query_get_recipe(recipe_name)
 
-        self.session.delete(recipe)
-        self.session.commit()
+        if recipe:
+            self.session.delete(recipe)
+            self.session.commit()
 
     def add_rw2recipe(self, recipe_name: str, ingredient_name: str, amount: float):
         """Añade un ingrediente a una receta"""
-        recipe = self.session.query(Recipes).filter_by(name=recipe_name.capitalize()).first()
-        ingredient = self.session.query(Ingredients).filter_by(name=ingredient_name.capitalize()).first()
-        ingredient2recipe = self.session.query(RecipeIngredients).filter_by(recipe_id=recipe.id,
-                                                                            ingredient_id=ingredient.id).first()
-
-        if not ingredient2recipe:  # Entra si no existe ingredient2recipe
-            ingredient2recipe = RecipeIngredients(recipe_id=recipe.id, ingredient_id=ingredient.id, amount=amount)
+        recipe, ingredient, ingredient2recipe = self.query_get_rw2recipe(recipe_name, ingredient_name,
+                                                                         return_as_bucket=True)
+        if not ingredient2recipe: #Entra si no existe ingredient2recipe
+            ingredient2recipe = RecipeIngredients(recipe_id=recipe.id, ingredient_id=ingredient.id)
+            ingredient2recipe.amount = amount if isinstance(amount, float) and amount > 0 else None
             self.session.add(ingredient2recipe)
             self.session.commit()
 
     def modify_rw2recipe(self, recipe_name: str, ingredient_name: str, amount: float):
         """Modifica la cantidad necesaria de un ingrediente en la receta"""
-        recipe = self.session.query(Recipes).filter_by(name=recipe_name.capitalize()).first()
-        ingredient = self.session.query(Ingredients).filter_by(name=ingredient_name.capitalize()).first()
-        ingredient2recipe = self.session.query(RecipeIngredients).filter_by(recipe_id=recipe.id,
-                                                                            ingredient_id=ingredient.id).first()
+        ingredient2recipe = self.query_get_rw2recipe(recipe_name, ingredient_name)
 
         if ingredient2recipe:  # Entra si existe ingrediente2recipe
-            ingredient2recipe.amount = amount
+            ingredient2recipe.amount = amount if isinstance(amount, float) and amount > 0 else None
             self.session.commit()
 
     def remove_rw2recipe(self, recipe_name: str, ingredient_name: str):
-        recipe = self.session.query(Recipes).filter_by(name=recipe_name.capitalize()).first()
-        ingredient = self.session.query(Ingredients).filter_by(name=ingredient_name.capitalize()).first()
-        ingredient2recipe = self.session.query(RecipeIngredients).filter_by(recipe_id=recipe.id,
-                                                                            ingredient_id=ingredient.id).first()
+        ingredient2recipe = self.query_get_rw2recipe(recipe_name, ingredient_name)
 
-        self.session.delete(ingredient2recipe)
-        self.session.commit()
+        if ingredient2recipe:
+            self.session.delete(ingredient2recipe)
+            self.session.commit()
 
     def add_ingredient(self, ingredient_name: str, ingredient_price: int, ingredient_unitype: str = None):
-        ingredient_exist = self.session.query(Ingredients).filter_by(name=ingredient_name).first()
-        if not ingredient_exist:
+        ingredient = self.query_get_ingredient(ingredient_name)
+
+        if not ingredient:
             ingredient = Ingredients(name=ingredient_name.capitalize(), price=ingredient_price)
 
-            if ingredient_unitype:
-                ingredient.unit_type = ingredient_unitype.upper()
+            ingredient.unit_type = ingredient_unitype.upper() if isinstance(ingredient_unitype, str) else None
+            ingredient.id = 101 if len(self.query_all_ingredients()) == 0 else None
 
             self.session.add(ingredient)
             self.session.commit()
 
+    def modify_id(self, ingredient_name: str, new_id: int):
+        ingredient = self.query_get_ingredient(ingredient_name)
+
+        if ingredient:
+            ingredient.id = new_id if isinstance(new_id, int) and ingredient.id > 0 else ingredient.id
+            self.session.commit()
+
     def modify_price(self, ingredient_name: str, new_price: float):
-        ingredient = self.session.query(Ingredients).filter_by(name=ingredient_name.capitalize()).first()
+        ingredient = self.query_get_ingredient(ingredient_name)
 
-        if ingredient and new_price > 0:
-            ingredient.price = new_price
-
-        self.session.commit()
+        if ingredient:
+            ingredient.price = new_price if isinstance(new_price, float) and new_price > 0 else ingredient.id
+            self.session.commit()
 
     def delete_ingredient(self, ingredient_name: str):
-        ingredients = self.session.query(Ingredients).filter_by(name=ingredient_name.capitalize()).all()
-        for ingredient in ingredients:
+        ingredient = self.query_get_ingredient(ingredient_name)
+
+        if ingredient:
             self.session.delete(ingredient)
-        self.session.commit()
+            self.session.commit()
 
 
 """Creacion y relacion con toda la DB"""
@@ -142,15 +192,15 @@ def main():
     # for tables in Base.metadata.tables:
     #     print(tables)
 
-    dbm.session.query(Ingredients).delete()
     dbm.add_ingredient("azucar", 585)
     dbm.add_ingredient("cacao amargo", 7800)
     dbm.add_ingredient("cebolla", 180)
     dbm.add_ingredient("albaca", 40, "unidad")
     dbm.add_ingredient("Harina 000", 175)
     dbm.add_ingredient("Harina 0000", 246)
-
+    dbm.modify_id("cebolla", 230)
     ingredients = dbm.session.query(Ingredients).all()
+
     print(f"| {'id'.ljust(3)} |  {'nombre'.ljust(20)} | {'precio'.ljust(8)} | {'u m'.ljust(6)} |")
     for ingredient in ingredients:
         id_str = str("{:03d}".format(ingredient.id)).ljust(2)
@@ -159,16 +209,17 @@ def main():
         unit_type_str = str(ingredient.unit_type).ljust(6)
         print(f"| {id_str} |  {name_str} | {price_str} | {unit_type_str} |")
 
-    dbm.session.query(Recipes).delete()
-    dbm.add_recipe("tarta", [("azucar", 0.2), ("pepino", 0.5), ("harina 000", 1)])
-    dbm.add_recipe("tarta", [("azucar", 0.2), ("pepino", 0.5), ("harina 000", 1)])
+    dbm.delete_recipe("tarta")
+    dbm.add_recipe("tarta", [("azucar", 0.2), ("pepino", 0.5), ("harina 000", 3.0)])
+    dbm.add_recipe("tarta", [("azucar", 0.2), ("pepino", 0.5), ("harina 000", 3)])
 
     recipes = dbm.session.query(Recipes).all()
     for recipe in recipes:
         print(recipe.name, end=" >> ")
         for ingredient in recipe.ingredients:
-            print(ingredient.ingredient.name, end=", ")
+            print(ingredient.ingredient.name, ingredient.amount, end=", ")
         print("\n")
+    dbm.delete_recipe("tarta")
 
 
 if __name__ == "__main__":

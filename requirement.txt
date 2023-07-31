@@ -1,2 +1,3 @@
 sqlalchemy==2.0.19
 pyinstaller==5.13.0
+pillow== 10.0.0
