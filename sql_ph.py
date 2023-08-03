@@ -5,7 +5,9 @@ from sqlalchemy import orm
 
 engine = create_engine('sqlite:///ph_database.db')
 Base = orm.declarative_base()
-
+ID= 0
+NAME= 1
+PRICE= 2
 
 class RecipeIngredients(Base):
     """Crear una tabla que contenga la union de las dos tablas"""
@@ -29,6 +31,7 @@ class Recipes(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
+    price = Column(Float, nullable=False)
 
     "Relacion bidireccional de Recipes > RecipeIngredients"
     ingredients = relationship("RecipeIngredients", back_populates="recipe",
@@ -57,7 +60,6 @@ class DBManager:
                 return recipe
             return False
         except Exception as e:
-            print(e)
             return False
 
     def query_get_ingredient(self, ingredient_name: str):
@@ -68,7 +70,6 @@ class DBManager:
                 return ingredient
             return False
         except Exception as e:
-            print(e)
             return False
 
     def query_get_rw2recipe(self, recipe_name: str, ingredient_name: str, return_as_bucket: bool = False):
@@ -77,40 +78,41 @@ class DBManager:
         try:
             recipe = self.query_get_recipe(recipe_name)
             ingredient = self.query_get_ingredient(ingredient_name)
-            recipe_ingredients = self.session.query(RecipeIngredients).filter_by(recipe_id=recipe.id,
-                                                                                 ingredient_id=ingredient.id).first()
-            if recipe_ingredients:
+            if recipe and ingredient:
+                recipe_ingredient = self.session.query(RecipeIngredients).filter_by(recipe_id=recipe.id,
+                                                                                    ingredient_id=ingredient.id).first()
+            if recipe_ingredient:
                 if return_as_bucket:
-                    return recipe, ingredient, recipe_ingredients
-                return recipe_ingredients
-            return False
+                    return recipe, ingredient, recipe_ingredient
+                return recipe_ingredient
+            raise Exception
         except Exception as e:
-            print(e)
+            if return_as_bucket:
+                return recipe, ingredient, False
             return False
 
     def query_all_recipes(self):
-        return self.session.query(Recipes).all()
+        recipes = self.session.query(Recipes).all()
+        all_recipes = [(recipe.id,recipe.name,recipe.price) for recipe in recipes]
+        return all_recipes
 
     def query_all_ingredients(self):
-        return self.session.query(Ingredients).all()
+        ingredients = self.session.query(Ingredients).all()
+        all_ingredients = [(ingredient.id, ingredient.name, ingredient.price) for ingredient in ingredients]
+        return all_ingredients
 
     def query_all_rw2recipes(self):
         return self.session.query(RecipeIngredients).all()
 
-    def add_recipe(self, recipe_name: str, its_ingredients: list):
+    def add_recipe(self, recipe_name: str, recipe_price: float, its_ingredients: list):
         """Creamos una receta nueva este debe entregar una lista de ingredientes tipo tupla,
          uno su nombre y en la otra su cantidad"""
-        if self.query_get_recipe(recipe_name):# Entra si no existe recipe
-            recipe = Recipes(name=recipe_name)
+        if not self.query_get_recipe(recipe_name):# Entra si no existe recipe
+            recipe = Recipes(name=recipe_name.capitalize(), price=recipe_price)
             self.session.add(recipe)
+            self.session.commit()
             for ingredient_name, amount in its_ingredients:
-                ingredient2recipe = self.query_get_rw2recipe(recipe_name, ingredient_name)
-                if not ingredient2recipe:
-                    ingredient = self.query_get_ingredient(ingredient_name)
-                    ingredient2recipe = RecipeIngredients(recipe_id=recipe.id, ingredient_id=ingredient.id)
-                    ingredient2recipe.amount = amount if isinstance(amount, float) and amount > 0 else None
-                    self.session.add(ingredient2recipe)
-                    self.session.commit()
+                self.add_rw2recipe(recipe_name, ingredient_name, amount)
 
     def delete_recipe(self, recipe_name: str):
         """Elimina una receta por completo y toda su relacion"""
@@ -124,7 +126,7 @@ class DBManager:
         """Añade un ingrediente a una receta"""
         recipe, ingredient, ingredient2recipe = self.query_get_rw2recipe(recipe_name, ingredient_name,
                                                                          return_as_bucket=True)
-        if not ingredient2recipe: #Entra si no existe ingredient2recipe
+        if recipe and ingredient and not ingredient2recipe: #Entra si no existe ingredient2recipe
             ingredient2recipe = RecipeIngredients(recipe_id=recipe.id, ingredient_id=ingredient.id)
             ingredient2recipe.amount = amount if isinstance(amount, float) and amount > 0 else None
             self.session.add(ingredient2recipe)
@@ -208,10 +210,9 @@ def main():
         price_str = str(ingredient.price).ljust(8)
         unit_type_str = str(ingredient.unit_type).ljust(6)
         print(f"| {id_str} |  {name_str} | {price_str} | {unit_type_str} |")
-
-    dbm.delete_recipe("tarta")
-    dbm.add_recipe("tarta", [("azucar", 0.2), ("pepino", 0.5), ("harina 000", 3.0)])
-    dbm.add_recipe("tarta", [("azucar", 0.2), ("pepino", 0.5), ("harina 000", 3)])
+        
+    dbm.add_recipe("tarta", 720, [("azucar", 0.2), ("pepino", 0.5), ("harina 000", 3.0)])
+    dbm.add_recipe("tarta", 720, [("azucar", 0.2), ("pepino", 0.5), ("harina 000", 3)])
 
     recipes = dbm.session.query(Recipes).all()
     for recipe in recipes:
@@ -219,7 +220,7 @@ def main():
         for ingredient in recipe.ingredients:
             print(ingredient.ingredient.name, ingredient.amount, end=", ")
         print("\n")
-    dbm.delete_recipe("tarta")
+
 
 
 if __name__ == "__main__":
