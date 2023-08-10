@@ -7,6 +7,7 @@ import inspect
 
 engine = create_engine('sqlite:///ph_database.db')
 Base = orm.declarative_base()
+decorator_executed = False
 
 """La Base de Datos se definen dos tipos de tabla:
 Tabla Principal: Contiene escencialmente los nombres de los productos y su precio
@@ -43,9 +44,9 @@ class PackagingsRecipes(Base):
     bidireccional con Recipe > PackagingsRecipes"""
     recipe = relationship("Recipes", back_populates="packagings")
     packaging = relationship("Packagings")
-    
+
     def total_price(self=None):
-        return self.recipe.price_for_unit()*self.amount + self.packaging.total_price()
+        return self.recipe.price_for_unit() * self.amount + self.packaging.total_price()
 
 
 class Recipes(Base):
@@ -56,7 +57,7 @@ class Recipes(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
     profit = Column(Float, nullable=False)
-    unit = Column(Integer, nullable=False, default=1)
+    units = Column(Integer, nullable=False, default=1)
 
     """Relacion unidireccional de Recipes > IngredientsRecipes
     Relacion bidireccional de Recipes > PackagingsRecipes"""
@@ -66,20 +67,20 @@ class Recipes(Base):
                               cascade="all, delete")
 
     def as_tuple(self=None):
-        return self.id, self.name, self.profit, self.unit
+        return self.id, self.name, self.profit, self.units
 
     def total_cost(self):
         total_cost = 0
         for ingredient_relation in self.ingredients:
             ingredient = ingredient_relation.ingredient
-            total_cost += ingredient.price * ingredient_relation.amount
+            total_cost += ingredient.cost * ingredient_relation.amount
         return total_cost
 
     def cost_for_unit(self):
-        return (self.total_cost())/self.unit
-    
+        return (self.total_cost()) / self.units
+
     def price_for_unit(self):
-        return self.cost_for_unit()*self.profit
+        return self.cost_for_unit() * self.profit
 
 
 class Ingredients(Base):
@@ -89,11 +90,11 @@ class Ingredients(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
-    price = Column(Float, nullable=True)
+    cost = Column(Float, nullable=True)
     unit_type = Column(String, nullable=False)  # Existen (unidad, kg, litro)
 
     def as_tuple(self=None):
-        return self.id, self.name, self.price, self.unit_type
+        return self.id, self.name, self.cost, self.unit_type
 
 
 class Packagings(Base):
@@ -103,16 +104,14 @@ class Packagings(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
+    cost = Column(Float, nullable=False)
     profit = Column(Float, nullable=False)
-    price = Column(Float, nullable=False)
 
     def as_tuple(self=None):
-        return self.id, self.name, self.price
-    
-    def total_price(self):
-        return self.price*self.profit
-        
+        return self.id, self.name, self.cost
 
+    def total_price(self):
+        return self.cost * self.profit
 
 
 def __capitalize__(*args_name):
@@ -145,9 +144,10 @@ class _DBManager:
     def __init__(self, session_local: orm.session.Session):
         self.session = session_local
 
-    """Todas las Querys disponibles hacia Tablas Pricipales"""
-
     def __insert__(self, Object):
+        """Funcion privada del objeto DBManager que nos permite omitir los errores
+        de asignacion de ID a cada tabla, esto nos permite que a pesar que el usuario
+        coloque un valor ya ocupado este se va a fixear solo"""
         try:
             self.session.add(Object)
             self.session.commit()
@@ -159,6 +159,8 @@ class _DBManager:
         except Exception as e:
             print(f"{type(e).__name__} error occurred: {e}")
 
+    """Todas las Querys disponibles hacia Tablas Pricipales"""
+
     @__capitalize__('recipe_name')
     def query_get_recipe(self, recipe_name: str, everything: bool = False):
         try:
@@ -168,10 +170,10 @@ class _DBManager:
             else:
                 result = self.session.query(Recipes).filter_by(
                     name=recipe_name).first()
-            return result if result else None
+            return result if result else False
         except Exception as e:
             print(f"{type(e).__name__} error occurred: {e}")
-            return None
+            return False
 
     @__capitalize__('ingredient_name')
     def query_get_ingredient(self, ingredient_name: str, everything: bool = False):
@@ -182,10 +184,10 @@ class _DBManager:
             else:
                 result = self.session.query(Ingredients).filter_by(
                     name=ingredient_name).first()
-            return result if result else None
+            return result if result else False
         except Exception as e:
             print(f"{type(e).__name__} error occurred: {e}")
-            return None
+            return False
 
     @__capitalize__('packaging_name')
     def query_get_packaging(self, packaging_name: str, everything: bool = False):
@@ -196,7 +198,7 @@ class _DBManager:
             else:
                 result = self.session.query(Packagings).filter_by(
                     name=packaging_name).first()
-            return result if result else None
+            return result if result else False
         except Exception as e:
             print(f"{type(e).__name__} error occurred: {e}")
             return None
@@ -215,7 +217,6 @@ class _DBManager:
 
     """Todas las Querys disponibles hacia Tablas Relacionales"""
 
-    @__capitalize__('recipe_name')
     def query_get_ingredients2recipe(self, recipe_name: str):
         recipe_exist = self.query_get_recipe(recipe_name)
         if recipe_exist:
@@ -223,8 +224,29 @@ class _DBManager:
             return [recipe_ingredient.ingredient
                     for recipe_ingredient in recipe.ingredients]
 
-    @__capitalize__('recipe_name')
-    def query_get_packagings2recipe(self, recipe_name: str):
+    def query_get_packaging2recipe(self, recipe_name: str, packaging_name: str, parent_to: bool = False):
+        result = []
+        packaging2recipe_exist = False
+        recipe_exist = self.query_get_recipe(recipe_name)
+        packaging_exist = self.query_get_packaging(packaging_name)
+        if parent_to:
+            result.append(recipe_exist)
+            result.append(packaging_exist)
+        try:
+            recipe, packaging = recipe_exist, packaging_exist
+            packaging2recipe_exist = self.session.query(PackagingsRecipes).filter(
+                (PackagingsRecipes.recipe_id == recipe.id) & (
+                        PackagingsRecipes.packaging_id == packaging.id)).first()
+        except AttributeError:
+            pass
+        except Exception as e:
+            print(f"{type(e).__name__} error occurred: {e}")
+            pass
+        finally:
+            result.append(packaging2recipe_exist)
+            return tuple(result)
+
+    def query_get_all_packagings2recipe(self, recipe_name: str):
         recipe_exist = self.query_get_recipe(recipe_name)
         if recipe_exist:
             recipe = recipe_exist
@@ -238,20 +260,19 @@ class _DBManager:
     def add_recipe(self,
                    recipe_name: str,
                    recipe_profit: float,
+                   recipe_units: int,
                    ingredients_: list = None,
                    recipe_id: int = None,
-                   recipe_unit: int = None
                    ) -> bool:
         recipe_exist = self.query_get_recipe(recipe_name)
         if not recipe_exist:
             recipe = Recipes(id=recipe_id,
                              name=recipe_name,
                              profit=recipe_profit,
-                             unit=recipe_unit if isinstance(recipe_unit, int) and recipe_unit > 0 else None)
+                             units=recipe_units if recipe_units > 0 else None)
             self.__insert__(recipe)
             if ingredients_:
                 for ingredient_name, ingredient_amount in ingredients_:
-
                     self.add_ingredient2recipe(recipe_name=recipe_name,
                                                ingredient_name=ingredient_name,
                                                amount=ingredient_amount)
@@ -260,7 +281,7 @@ class _DBManager:
     @__capitalize__('ingredient_name', 'ingredient_unitype')
     def add_ingredient(self,
                        ingredient_name: str,
-                       ingredient_price: float,
+                       ingredient_cost: float,
                        ingredient_unitype: str,
                        ingredient_id: int = None
                        ) -> bool:
@@ -269,7 +290,7 @@ class _DBManager:
         if not ingredient_exist:
             ingredient = Ingredients(id=ingredient_id,
                                      name=ingredient_name,
-                                     price=ingredient_price,
+                                     cost=ingredient_cost,
                                      unit_type=ingredient_unitype)
             self.__insert__(ingredient)
         return not ingredient_exist
@@ -277,7 +298,7 @@ class _DBManager:
     @__capitalize__('packaging_name')
     def add_packaging(self,
                       packaging_name: str,
-                      packaging_price: float,
+                      packaging_cost: float,
                       packaging_profit: float,
                       packaging_id: int = None
                       ) -> bool:
@@ -285,7 +306,7 @@ class _DBManager:
         if not packaging_exist:
             packaging = Packagings(id=packaging_id,
                                    name=packaging_name,
-                                   price=packaging_price,
+                                   cost=packaging_cost,
                                    profit=packaging_profit)
             self.__insert__(packaging)
         return not packaging_exist
@@ -293,7 +314,6 @@ class _DBManager:
     """Todas las funciones eliminar de Tabla Principal
     Estas funciones retornaran Type: bool"""
 
-    @__capitalize__('recipe_name')
     def del_recipe(self,
                    recipe_name: str
                    ) -> bool:
@@ -305,7 +325,6 @@ class _DBManager:
             return True
         return False
 
-    @__capitalize__('ingredient_name')
     def del_ingredient(self,
                        ingredient_name: str
                        ) -> bool:
@@ -317,7 +336,6 @@ class _DBManager:
             return True
         return False
 
-    @__capitalize__('packaging_name')
     def del_packaging(self,
                       packaging_name: str
                       ) -> bool:
@@ -332,7 +350,6 @@ class _DBManager:
     """Todas las funciones modificar precios de Tabla Principal
     Estas funciones retornaran Type: bool"""
 
-    @__capitalize__('recipe_name')
     def mdf_profit_recipe(self,
                           recipe_name: str,
                           new_profit: float
@@ -345,28 +362,26 @@ class _DBManager:
             return True
         return False
 
-    @__capitalize__('ingredient_name')
-    def mdf_price_ingredient(self,
-                             ingredient_name: str,
-                             new_price: float
-                             ) -> bool:
+    def mdf_cost_ingredient(self,
+                            ingredient_name: str,
+                            new_cost: float
+                            ) -> bool:
         ingredient_exist = self.query_get_ingredient(ingredient_name)
         if ingredient_exist:
             ingredient = ingredient_exist
-            ingredient.price = new_price if new_price > 0 else ingredient.price
+            ingredient.cost = new_cost if new_cost > 0 else ingredient.cost
             self.session.commit()
             return True
         return False
 
-    @__capitalize__('packaging_name')
-    def mdf_price_packaging(self,
-                            packaging_name: str,
-                            new_price: float
-                            ) -> bool:
+    def mdf_cost_packaging(self,
+                           packaging_name: str,
+                           new_cost: float
+                           ) -> bool:
         packaging_exist = self.query_get_packaging(packaging_name)
         if packaging_exist:
             packaging = packaging_exist
-            packaging.price = new_price if new_price > 0 else packaging.price
+            packaging.cost = new_cost if new_cost > 0 else packaging.cost
             self.session.commit()
             return True
         return False
@@ -374,7 +389,6 @@ class _DBManager:
     """Todas las funciones añadir a Tabla Relacional
     Estas funciones retornaran Type: bool"""
 
-    @__capitalize__('recipe_name', 'ingredient_name')
     def add_ingredient2recipe(self,
                               recipe_name: str,
                               ingredient_name: str,
@@ -400,22 +414,13 @@ class _DBManager:
             self.session.commit()
         return not ingredient2recipe_exist
 
-    @__capitalize__('recipe_name', 'packaging_name')
     def add_packaging2recipe(self,
                              recipe_name: str,
                              packaging_name: str,
                              amount: int
                              ) -> bool:
-        recipe_exist = self.query_get_recipe(recipe_name)
-        packaging_exist = self.query_get_ingredient(packaging_name)
-        try:
-            recipe, packaging = recipe_exist, packaging_exist
-            packaging2recipe_exist = self.session.query(PackagingsRecipes).filter(
-                (PackagingsRecipes.recipe_id == recipe.id) & (
-                        PackagingsRecipes.packaging_id == packaging.id)).first()
-        except Exception as e:
-            print(f"{type(e).__name__} error occurred: {e}")
-            return False
+        recipe, packaging, packaging2recipe_exist = self.query_get_packaging2recipe(
+            recipe_name, packaging_name, parent_to=True)
         if not packaging2recipe_exist:
             packaging2recipe = PackagingsRecipes(recipe_id=recipe.id,
                                                  packaging_id=packaging.id,
@@ -434,17 +439,17 @@ DBM = _DBManager(session)
 
 def main():
     """Testing del la DB"""
-    # DBM.session.query(Ingredients).delete()
     print(DBM.add_ingredient("azucar", 500, "kg", ingredient_id=100))
     print(DBM.add_ingredient("harina 0000", 600, "kg"))
     print(DBM.add_ingredient("harina 000", 1230, "kg"))
     print(DBM.add_ingredient("leche", 400, 'litro'))
-    # ingredient = DBM.query_get_ingredient("ina", everything=True)
-    # for ingredients in ingredient:
-    #     print(ingredients.as_tuple())
-    print(DBM.add_recipe("torta", 3.0, [('azucar', .5), ('harina 000', .7),
+    print(DBM.add_recipe("torta", 3.0, 1,[('azucar', .5), ('harina 000', .7),
                                         ('aceituna', 1), ('harina 0000', 2)]))
-    # print(DBM.add_packaging("Caja x8", 300, 2))
+    print(DBM.add_recipe("alfajores", 3, 12, [('harina 000', .8),('leche', 1)]))
+    print(DBM.add_packaging("caja x8 marplatense", 69, 1.5))
+    print(DBM.add_ingredient2recipe('torta', 'leche', 0.5))
+    print(DBM.add_packaging2recipe('torta', 'caja x8 marplatense', 1))
+    print(DBM.add_packaging2recipe('alfajores', 'caja x8 marplatense', 6))
 
 
 if __name__ == "__main__":
