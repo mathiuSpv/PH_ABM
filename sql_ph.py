@@ -42,7 +42,10 @@ class PackagingsRecipes(Base):
     """Relacion bidireccional de PackagingsRecipes > Packagings y
     bidireccional con Recipe > PackagingsRecipes"""
     recipe = relationship("Recipes", back_populates="packagings")
-    packaging = relationship("Packagings", back_populates="packagings")
+    packaging = relationship("Packagings")
+    
+    def total_price(self=None):
+        return self.recipe.price_for_unit()*self.amount + self.packaging.total_price()
 
 
 class Recipes(Base):
@@ -52,9 +55,10 @@ class Recipes(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
+    profit = Column(Float, nullable=False)
     unit = Column(Integer, nullable=False, default=1)
 
-    """Relacion bidireccional de Recipes > IngredientsRecipes
+    """Relacion unidireccional de Recipes > IngredientsRecipes
     Relacion bidireccional de Recipes > PackagingsRecipes"""
     ingredients = relationship("IngredientsRecipes", back_populates="recipe",
                                cascade="all, delete")
@@ -62,7 +66,7 @@ class Recipes(Base):
                               cascade="all, delete")
 
     def as_tuple(self=None):
-        return self.id, self.name, self.profit
+        return self.id, self.name, self.profit, self.unit
 
     def total_cost(self):
         total_cost = 0
@@ -71,8 +75,11 @@ class Recipes(Base):
             total_cost += ingredient.price * ingredient_relation.amount
         return total_cost
 
-    def total_price(self):
+    def cost_for_unit(self):
         return (self.total_cost())/self.unit
+    
+    def price_for_unit(self):
+        return self.cost_for_unit()*self.profit
 
 
 class Ingredients(Base):
@@ -96,15 +103,15 @@ class Packagings(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
+    profit = Column(Float, nullable=False)
     price = Column(Float, nullable=False)
 
-    recipes = relationship("PackagingsRecipes", back_populates="packagings")
-
     def as_tuple(self=None):
-        return self.id, self.name, self.price, self.unit
-
+        return self.id, self.name, self.price
+    
     def total_price(self):
-        return self.recipes.recipe.total_price()*self.recipes.amount + self.price
+        return self.price*self.profit
+        
 
 
 
@@ -240,7 +247,7 @@ class _DBManager:
             recipe = Recipes(id=recipe_id,
                              name=recipe_name,
                              profit=recipe_profit,
-                             unit=recipe_unit)
+                             unit=recipe_unit if isinstance(recipe_unit, int) and recipe_unit > 0 else None)
             self.__insert__(recipe)
             if ingredients_:
                 for ingredient_name, ingredient_amount in ingredients_:
@@ -271,13 +278,15 @@ class _DBManager:
     def add_packaging(self,
                       packaging_name: str,
                       packaging_price: float,
+                      packaging_profit: float,
                       packaging_id: int = None
                       ) -> bool:
         packaging_exist = self.query_get_packaging(packaging_name)
         if not packaging_exist:
             packaging = Packagings(id=packaging_id,
                                    name=packaging_name,
-                                   price=packaging_price)
+                                   price=packaging_price,
+                                   profit=packaging_profit)
             self.__insert__(packaging)
         return not packaging_exist
 
@@ -429,6 +438,7 @@ def main():
     print(DBM.add_ingredient("azucar", 500, "kg", ingredient_id=100))
     print(DBM.add_ingredient("harina 0000", 600, "kg"))
     print(DBM.add_ingredient("harina 000", 1230, "kg"))
+    print(DBM.add_ingredient("leche", 400, 'litro'))
     # ingredient = DBM.query_get_ingredient("ina", everything=True)
     # for ingredients in ingredient:
     #     print(ingredients.as_tuple())

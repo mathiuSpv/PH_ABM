@@ -88,7 +88,7 @@ class MiApp:
         all_recipes = DBM.query_get_all_recipes()
         if len(all_recipes) != 0:
             for recipe in all_recipes:
-                recipe = [recipe.id, recipe.name, recipe.total_profit()]
+                recipe = [recipe.id, recipe.name, recipe.price_for_unit()]
                 table.insert(parent='', index='end', values=recipe)
         table.grid(row=0, column=0, sticky="nsew")
 
