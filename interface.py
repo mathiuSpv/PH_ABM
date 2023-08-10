@@ -4,8 +4,9 @@ from PIL import Image, ImageTk
 from sql_ph import DBM
 
 root = Tk()
-position_right = int((root.winfo_screenwidth() * (2 / 5)))
-position_down = int((root.winfo_screenheight() * (2 / 5)))
+position_right = int((root.winfo_screenwidth() * (1 / 5)))
+position_down = int((root.winfo_screenheight() * (1 / 5)))
+standar_position = "+{}+{}".format(position_right, position_down)
 photo = None
 
 
@@ -22,7 +23,7 @@ class MiApp:
 
     def main_root(self):
         global photo
-        self.master.geometry('480x320')
+        self.master.geometry('480x320'+standar_position)
         self.master.rowconfigure(0, minsize=20)
         self.master.rowconfigure(1, weight=5)
         self.master.rowconfigure(2, weight=5)
@@ -172,16 +173,12 @@ class MiApp:
         pass
 
     def details_recipe_windows(self):
-        if self.details_top:
-            self.details_top.lift()
-            return
         self.details_top: Toplevel = Toplevel(self.master)
         self.details_top.title("Detalles de la receta")
         self.details_top.iconbitmap("ph_icon.ico")
         self.__set_toplevel__()
-        self.details_top.protocol("WM_DELETE_WINDOW", self.__on_closing_toplevel__)
 
-        
+
 
 
     def __go2__(self, where: str):
@@ -202,8 +199,9 @@ class MiApp:
     def __set_toplevel__(self, geometry_size: str = "320x320"):
         window_width = self.details_top.winfo_reqwidth()
         window_height = self.details_top.winfo_reqheight()
-        position_t_right = int(position_right - (window_height / 2))
-        position_t_down = int(position_down - (window_width / 2))
+        position_t_right = int(position_right + (window_height / 1))
+        position_t_down = int(position_down + (window_width / 2))
+        toplevel_posi
         self.details_top.geometry(f'{geometry_size}'+'+{}+{}'.format(position_t_right, position_t_down))
         self.details_top.resizable(False, False)
         self.details_top.grab_set()
