@@ -221,7 +221,7 @@ class _DBManager:
         recipe_exist = self.query_get_recipe(recipe_name)
         if recipe_exist:
             recipe = recipe_exist
-            return [recipe_ingredient.ingredient
+            return [(recipe_ingredient.ingredient, recipe_ingredient.amount)
                     for recipe_ingredient in recipe.ingredients]
 
     def query_get_packaging2recipe(self, recipe_name: str, packaging_name: str, parent_to: bool = False):
@@ -443,9 +443,9 @@ def main():
     print(DBM.add_ingredient("harina 0000", 600, "kg"))
     print(DBM.add_ingredient("harina 000", 1230, "kg"))
     print(DBM.add_ingredient("leche", 400, 'litro'))
-    print(DBM.add_recipe("torta", 3.0, 1,[('azucar', .5), ('harina 000', .7),
-                                        ('aceituna', 1), ('harina 0000', 2)]))
-    print(DBM.add_recipe("alfajores", 3, 12, [('harina 000', .8),('leche', 1)]))
+    print(DBM.add_recipe("torta", 3.0, 1, [('azucar', .5), ('harina 000', .7),
+                                         ('aceituna', 1), ('harina 0000', 2)]))
+    print(DBM.add_recipe("alfajores", 3, 12, [('harina 000', .8), ('leche', 1)]))
     print(DBM.add_packaging("caja x8 marplatense", 69, 1.5))
     print(DBM.add_ingredient2recipe('torta', 'leche', 0.5))
     print(DBM.add_packaging2recipe('torta', 'caja x8 marplatense', 1))
