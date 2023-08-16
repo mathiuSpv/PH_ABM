@@ -217,14 +217,40 @@ class _DBManager:
 
     """Todas las Querys disponibles hacia Tablas Relacionales"""
 
-    def query_get_ingredients2recipe(self, recipe_name: str):
+    def query_get_ingredient2recipe(self, recipe_name: str,
+                                    ingredient_name: str,
+                                    parent_to: bool = False):
+        result = []
+        ingredient2recipe_exist = False
+        recipe_exist = self.query_get_recipe(recipe_name)
+        ingredient_exist = self.query_get_ingredient(ingredient_name)
+        if parent_to:
+            result.append(recipe_exist)
+            result.append(ingredient_exist)
+        try:
+            recipe, ingredient = recipe_exist, ingredient_exist
+            ingredient2recipe_exist = self.session.query(IngredientsRecipes).filter(
+                (IngredientsRecipes.recipe_id == recipe.id) & (
+                        IngredientsRecipes.ingredient_id == ingredient.id)).first()
+        except AttributeError:
+            pass
+        except Exception as e:
+            print(f"{type(e).__name__} error occurred: {e}")
+            pass
+        finally:
+            result.append(ingredient2recipe_exist)
+            return tuple(result) if parent_to else result[0]
+
+    def query_get_all_ingredients2recipe(self, recipe_name: str):
         recipe_exist = self.query_get_recipe(recipe_name)
         if recipe_exist:
             recipe = recipe_exist
             return [(recipe_ingredient.ingredient, recipe_ingredient.amount)
                     for recipe_ingredient in recipe.ingredients]
 
-    def query_get_packaging2recipe(self, recipe_name: str, packaging_name: str, parent_to: bool = False):
+    def query_get_packaging2recipe(self, recipe_name: str,
+                                   packaging_name: str,
+                                   parent_to: bool = False):
         result = []
         packaging2recipe_exist = False
         recipe_exist = self.query_get_recipe(recipe_name)
@@ -244,7 +270,7 @@ class _DBManager:
             pass
         finally:
             result.append(packaging2recipe_exist)
-            return tuple(result)
+            return tuple(result) if parent_to else result[0]
 
     def query_get_all_packagings2recipe(self, recipe_name: str):
         recipe_exist = self.query_get_recipe(recipe_name)
@@ -386,6 +412,21 @@ class _DBManager:
             return True
         return False
 
+    """Todas las funciones modificar precios de Tabla Relacionales
+    Estas funciones retornaran Type: bool """
+
+    def mdf_amount_ingredient2recipe(self,
+                                     recipe_name: str,
+                                     ingredient_name: str,
+                                     new_amount: float
+                                     ) -> bool:
+        ingredient2recipe_exist = self.query_get_ingredient2recipe(recipe_name, ingredient_name)
+        if ingredient2recipe_exist:
+            ingredient2recipe = ingredient2recipe_exist
+            ingredient2recipe.amount = new_amount if new_amount > 0 else ingredient2recipe.amount
+            self.session.commit()
+        return ingredient2recipe_exist
+
     """Todas las funciones añadir a Tabla Relacional
     Estas funciones retornaran Type: bool"""
 
@@ -394,25 +435,15 @@ class _DBManager:
                               ingredient_name: str,
                               amount: float
                               ) -> bool:
-        recipe_exist = self.query_get_recipe(recipe_name)
-        ingredient_exist = self.query_get_ingredient(ingredient_name)
-        try:
-            recipe, ingredient = recipe_exist, ingredient_exist
-            ingredient2recipe_exist = self.session.query(IngredientsRecipes).filter(
-                (IngredientsRecipes.recipe_id == recipe.id) & (
-                        IngredientsRecipes.ingredient_id == ingredient.id)).first()
-        except AttributeError:
-            return False
-        except Exception as e:
-            print(f"{type(e).__name__} error occurred: {e}")
-            return False
-        if not ingredient2recipe_exist:
+        recipe, ingredient, ingredient2recipe_exist = self.query_get_ingredient2recipe(
+            recipe_name, ingredient_name, parent_to=True)
+        if (recipe and ingredient) and not ingredient2recipe_exist:
             ingredient2recipe = IngredientsRecipes(recipe_id=recipe.id,
                                                    ingredient_id=ingredient.id,
                                                    amount=amount if amount > 0 else None)
             self.session.add(ingredient2recipe)
             self.session.commit()
-        return not ingredient2recipe_exist
+        return (recipe and ingredient) and not ingredient2recipe_exist
 
     def add_packaging2recipe(self,
                              recipe_name: str,
@@ -421,13 +452,25 @@ class _DBManager:
                              ) -> bool:
         recipe, packaging, packaging2recipe_exist = self.query_get_packaging2recipe(
             recipe_name, packaging_name, parent_to=True)
-        if not packaging2recipe_exist:
+        if (recipe and packaging) and not packaging2recipe_exist:
             packaging2recipe = PackagingsRecipes(recipe_id=recipe.id,
                                                  packaging_id=packaging.id,
                                                  amount=amount if amount > 0 else None)
             self.session.add(packaging2recipe)
             self.session.commit()
-        return not packaging2recipe_exist
+        return (recipe and packaging) and not packaging2recipe_exist
+
+    def remove_ingredient2recipe(self,
+                                 recipe_name: str,
+                                 ingredient_name: str
+                                 ) -> bool:
+        ingredient2recipe_exist = self.query_get_ingredient2recipe(
+            recipe_name, ingredient_name)
+        if ingredient2recipe_exist:
+            ingredient2recipe = ingredient2recipe_exist
+            self.session.delete(ingredient2recipe)
+            self.session.commit()
+        return not ingredient2recipe_exist
 
 
 """Creacion y relacion con toda la DB"""
@@ -439,12 +482,15 @@ DBM = _DBManager(session)
 
 def main():
     """Testing del la DB"""
+    DBM.session.query(Recipes).delete()
+    DBM.session.query(Ingredients).delete()
+    DBM.session.query(Packagings).delete()
     print(DBM.add_ingredient("azucar", 500, "kg", ingredient_id=100))
     print(DBM.add_ingredient("harina 0000", 600, "kg"))
     print(DBM.add_ingredient("harina 000", 1230, "kg"))
     print(DBM.add_ingredient("leche", 400, 'litro'))
     print(DBM.add_recipe("torta", 3.0, 1, [('azucar', .5), ('harina 000', .7),
-                                         ('aceituna', 1), ('harina 0000', 2)]))
+                                           ('aceituna', 1), ('harina 0000', 2)]))
     print(DBM.add_recipe("alfajores", 3, 12, [('harina 000', .8), ('leche', 1)]))
     print(DBM.add_packaging("caja x8 marplatense", 69, 1.5))
     print(DBM.add_ingredient2recipe('torta', 'leche', 0.5))
