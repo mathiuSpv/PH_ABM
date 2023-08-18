@@ -123,6 +123,7 @@ def __capitalize__(*args_name):
             for name in args_name:
                 if name in bound_values.arguments and isinstance(bound_values.arguments[name], str):
                     bound_values.arguments[name] = bound_values.arguments[name].capitalize()
+
             new_args = [bound_values.arguments[param_name] for param_name in
                         bound_values.signature.parameters if
                         bound_values.signature.parameters[param_name].default == inspect.Parameter.empty]
@@ -426,6 +427,22 @@ class _DBManager:
             ingredient2recipe.amount = new_amount if new_amount > 0 else ingredient2recipe.amount
             self.session.commit()
         return ingredient2recipe_exist
+
+    def mdf_recipe(self, recipe: Recipes, **kwargs):
+        """ Atributes de Recipe:\n
+            name = String\n
+            profit = Float\n
+            units = Integer
+        """
+        recipe_name: str = kwargs.get('name', None)
+        recipe_profit: float = kwargs.get('profit', None)
+        recipe_units: int = kwargs.get('units', None)
+        recipe.name = recipe_name if recipe_name else recipe.name
+        recipe.profit = recipe_profit if recipe_profit else recipe.profit
+        recipe.units = recipe_units if recipe_units else recipe.units
+        self.session.commit()
+
+
 
     """Todas las funciones añadir a Tabla Relacional
     Estas funciones retornaran Type: bool"""
