@@ -46,7 +46,7 @@ class PackagingsRecipes(Base):
     packaging = relationship("Packagings")
 
     def total_price(self=None):
-        return self.recipe.price_for_unit() * self.amount + self.packaging.total_price()
+        return (self.recipe.price_for_unit() * self.amount) + self.packaging.total_price()
 
 
 class Recipes(Base):
