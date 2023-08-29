@@ -43,7 +43,7 @@ class MiApp:
         self.master.geometry('480x320' + standar_position)
         self.master.rowconfigure(0, minsize=20)
         self.master.rowconfigure(1, weight=2)
-        self.master.rowconfigure(2, weight=1)
+        self.master.rowconfigure(2, weight=2)
         self.master.columnconfigure(0, minsize=20)
         self.master.columnconfigure(1, weight=1)
         self.master.columnconfigure(2, weight=7)
@@ -56,14 +56,14 @@ class MiApp:
         photo = ImageTk.PhotoImage(image)
         frame_logo = Frame(self.master)
         frame_logo.grid(row=1, column=1, sticky="nw")
-        Label(frame_logo, image=photo).pack(expand=YES, anchor="nw")
+        Label(frame_logo, image=photo).pack(anchor="nw")
 
         Button(self.master, text="Ver \nRecetas",
-               command=lambda: self.__go2__("Recipes"), width=12).grid(row=1, column=2, sticky="n", pady=10)
+               command=lambda: self.__go2__("Recipes"), width=18).grid(row=1, column=2, sticky="n", pady=10)
         Button(self.master, text="Ver \nMateria Prima",
-               command=lambda: self.__go2__("Ingredients"), width=12).grid(row=1, column=2, sticky="", pady=40)
+               command=lambda: self.__go2__("Ingredients"), width=18).grid(row=1, column=2, sticky="", pady=20)
         Button(self.master, text="Ver \nMaterial de Empaque",
-               command=lambda: self.__go2__("Packagings"), width=12).grid(row=1, column=2, sticky="s")
+               command=lambda: self.__go2__("Packagings"), width=18).grid(row=1, column=2, sticky="s", pady=10)
 
     def recipe_root(self):
 
@@ -742,7 +742,7 @@ class MiApp:
             self.table.delete(row)
             
         if filter_by_id:
-            ingredients = DBM.session.query(Ingredients).filter(Ingredients.id.like(f"{filter_by_id}%")).all()
+            ingredients = DBM.session.query(Ingredients).filter(Ingredients.id.like(f"%{filter_by_id}%")).all()
         elif filter_by_name:
             ingredients = DBM.query_get_ingredient(filter_by_name, everything=True)
         else:
@@ -758,7 +758,7 @@ class MiApp:
             self.table.delete(row)
             
         if filter_by_id:
-            packagings = DBM.session.query(Packagings).filter(Packagings.id.like(f"{filter_by_id}%")).all()
+            packagings = DBM.session.query(Packagings).filter(Packagings.id.like(f"%{filter_by_id}%")).all()
         elif filter_by_name:
             packagings = DBM.query_get_packaging(filter_by_name, everything=True)
         else:
