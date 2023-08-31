@@ -1,9 +1,10 @@
 from tkinter import *
 from tkinter import Tk, ttk, messagebox
+from ttkthemes import ThemedTk
 from PIL import Image, ImageTk
 from sql_ph import DBM, Recipes, Ingredients, Packagings
 
-root = Tk()
+root = ThemedTk(theme="breeze")
 position_right = int((root.winfo_screenwidth() * (1 / 5)))
 position_down = int((root.winfo_screenheight() * (1 / 5)))
 standar_position = "+{}+{}".format(position_right, position_down)
@@ -132,7 +133,6 @@ class MiApp:
                         print(recipe_id, recipe_name)
             except IndexError:
                 pass
-            
         
         def __on_key_fname__(event):
             content = entry_filter_name.get()
@@ -150,7 +150,6 @@ class MiApp:
             entry_filter_name.delete(0, END)
             self.__recipe_table__(filter_by_id=content)
         
-        
         entry_filter_id = Entry(self.master,
                           validate="key",
                           validatecommand=(self.master.register(
@@ -163,15 +162,15 @@ class MiApp:
                             validatecommand=(self.master.register(
                                 lambda P: True if P == "" or len(P) <= 32 else False), "%P"),
                             width=25)
-        add_recipe = Button(self.master, bg="white", text="Añadir Receta")
+        add_recipe = Button(self.master, bg="white", text="Añadir Receta", command= self.add_recipe)
         go_ingredient = Button(self.master, bg="white", text="Ir a Ingredientes", command=lambda: self.__go2__('Ingredients'))
         go_packaging = Button(self.master, bg="white", text="Ir a Empaquetados", command=lambda: self.__go2__('Packagings'))
         back_mainmenu = Button(self.master, bg="white", text="Volver a Menu", command=lambda: self.__go2__('Main'))
         
-        Label(self.master, text="ID", bg="white").grid(row=2, column=2, sticky="nw", padx=20)
-        Label(self.master, text="Nombre", bg="white").grid(row=2, column=2, sticky="nw", padx=120)
-        entry_filter_id.grid(row=2, column=2, sticky="w", padx=10)
-        entry_filter_name.grid(row= 2, column=2, sticky="w", padx=80)
+        Label(self.master, text="ID", bg="white").grid(row=2, column=2, sticky="sw", padx=20, pady=26)
+        Label(self.master, text="Nombre", bg="white").grid(row=2, column=2, sticky="sw", padx=120, pady=26)
+        entry_filter_id.grid(row=2, column=2, sticky="sw", padx=10, pady=5)
+        entry_filter_name.grid(row=2, column=2, sticky="sw", padx=80, pady=5)
         add_recipe.grid(row=2, column=3, sticky="")
         back_mainmenu.grid(row=1 ,column=2 , sticky="e")
         go_ingredient.grid(row=1 ,column=2, sticky="e", padx=105)
@@ -255,16 +254,16 @@ class MiApp:
                             validatecommand=(self.master.register(
                                 lambda P: True if P == "" or len(P) <= 32 else False), "%P"),
                             width=25)
-        add_recipe = Button(self.master, bg="white", text="Añadir \nIngrediente")
+        add_ingredient = Button(self.master, bg="white", text="Añadir \nIngrediente")
         go_recipe = Button(self.master, bg="white", text="Ir a Recetas", command=lambda: self.__go2__('Recipes'))
         go_packaging = Button(self.master, bg="white", text="Ir a Empaquetado", command=lambda: self.__go2__('Packagings'))
         back_mainmenu = Button(self.master, bg="white", text="Volver a Menu", command=lambda: self.__go2__('Main'))
         
-        Label(self.master, text="ID", bg="white").grid(row=2, column=2, sticky="nw", padx=20)
-        Label(self.master, text="Nombre", bg="white").grid(row=2, column=2, sticky="nw", padx=120)
-        entry_filter_id.grid(row=2, column=2, sticky="w", padx=10)
-        entry_filter_name.grid(row= 2, column=2, sticky="w", padx=80)
-        add_recipe.grid(row=2, column=3, sticky="n", rowspan=2)
+        Label(self.master, text="ID", bg="white").grid(row=2, column=2, sticky="sw", padx=20, pady=26)
+        Label(self.master, text="Nombre", bg="white").grid(row=2, column=2, sticky="sw", padx=120, pady=26)
+        entry_filter_id.grid(row=2, column=2, sticky="sw", padx=10, pady=5)
+        entry_filter_name.grid(row=2, column=2, sticky="sw", padx=80, pady=5)
+        add_ingredient.grid(row=2, column=3, sticky="n", rowspan=2)
         back_mainmenu.grid(row=1 ,column=2 , sticky="e")
         go_recipe.grid(row=1 ,column=2, sticky="e", padx=105)
         go_packaging.grid(row=1, column=2, sticky="e", padx=195)
@@ -306,12 +305,12 @@ class MiApp:
             except IndexError:
                 entry_filter_name.insert(0, content)
             finally:
-                self.__ingredient_table__(filter_by_name=content)
+                self.__packaging_table__(filter_by_name=content)
 
         def __on_key_fid__(event):
             content = entry_filter_id.get()
             entry_filter_name.delete(0, END)
-            self.__ingredient_table__(filter_by_id=content)
+            self.__packaging_table__(filter_by_id=content)
         
         # Table Recipe
         self.table = ttk.Treeview(self.master)
@@ -343,16 +342,16 @@ class MiApp:
                             validatecommand=(self.master.register(
                                 lambda P: True if P == "" or len(P) <= 32 else False), "%P"),
                             width=25)
-        add_recipe = Button(self.master, bg="white", text="Añadir \nEmpaquetado")
+        add_packaging = Button(self.master, bg="white", text="Añadir \nEmpaquetado")
         go_recipe = Button(self.master, bg="white", text="Ir a Ingredientes", command=lambda: self.__go2__('Ingredients'))
         go_ingredient = Button(self.master, bg="white", text="Ir a Recetas", command=lambda: self.__go2__('Recipes'))
         back_mainmenu = Button(self.master, bg="white", text="Volver a Menu", command=lambda: self.__go2__('Main'))
         
-        Label(self.master, text="ID", bg="white").grid(row=2, column=2, sticky="nw", padx=20)
-        Label(self.master, text="Nombre", bg="white").grid(row=2, column=2, sticky="nw", padx=120)
-        entry_filter_id.grid(row=2, column=2, sticky="w", padx=10)
-        entry_filter_name.grid(row= 2, column=2, sticky="w", padx=80)
-        add_recipe.grid(row=2, column=3, sticky="n", rowspan=2)
+        Label(self.master, text="ID", bg="white").grid(row=2, column=2, sticky="sw", padx=20, pady=26)
+        Label(self.master, text="Nombre", bg="white").grid(row=2, column=2, sticky="sw", padx=120, pady=26)
+        entry_filter_id.grid(row=2, column=2, sticky="sw", padx=12, pady=5)
+        entry_filter_name.grid(row=2, column=2, sticky="sw", padx=82, pady=5)
+        add_packaging.grid(row=2, column=3, sticky="n", rowspan=2)
         back_mainmenu.grid(row=1 ,column=2 , sticky="e")
         go_ingredient.grid(row=1 ,column=2, sticky="e", padx=105)
         go_recipe.grid(row=1, column=2, sticky="e", padx=195)
@@ -420,8 +419,8 @@ class MiApp:
         self.details_top.rowconfigure(0, minsize=12)  # Espacios
         self.details_top.rowconfigure(1, minsize=54)
         self.details_top.rowconfigure(2, weight=9)
-        self.details_top.rowconfigure(3, weight=3)
-        self.details_top.rowconfigure(4, weight=3)
+        self.details_top.rowconfigure(3, weight=2)
+        self.details_top.rowconfigure(4, weight=4)
         self.details_top.rowconfigure(5, minsize=2)  # Espacios
         self.details_top.columnconfigure(0, minsize=12)  # Espacios
         self.details_top.columnconfigure(1, minsize=80)
@@ -623,24 +622,20 @@ class MiApp:
         Label(self.details_top, text="   NOMBRE ", bg="white").grid(
             row=1, column=1, sticky="ne", padx=38)
 
-        # === Label Ingredientes de la receta
-        Label(self.details_top, text="INGREDIENTES DE LA RECETA ", bg="white").grid(
-            row=2, column=1, sticky="ne")
-
         # === Label Costo Total
         label_total_cost = Label(self.details_top,
                                  bg="white")
-        label_total_cost.grid(row=3, column=1, sticky="se")
+        label_total_cost.grid(row=3, column=1, rowspan=2, sticky="e")
 
         # === Label Beneficio
         Label(self.details_top, text="X BENEFICIO",
-              bg="white").grid(row=4, column=1, sticky="ne", padx=50)
+              bg="white").grid(row=4, column=1, sticky="e", padx=50)
 
         # === Label Beneficios $
         profit_label = Label(self.details_top,
                              text=__profit_price__(),
                              bg="white")
-        profit_label.grid(row=4, column=2, columnspan=2, sticky="nw")
+        profit_label.grid(row=4, column=2, columnspan=2, sticky="w")
 
         # === Label unidades
         Label(self.details_top, text="UNIDADES", bg="white").grid(
@@ -660,9 +655,9 @@ class MiApp:
         table_ingredients2recipe.column('edit', width=24, anchor=CENTER)
         table_ingredients2recipe.column('delete', width=24, anchor=CENTER)
         table_ingredients2recipe.heading("id", text="ID")
-        table_ingredients2recipe.heading("name", text="Nombre")
+        table_ingredients2recipe.heading("name", text="Ingredientes")
         table_ingredients2recipe.heading("quantity", text="Cantidad")
-        table_ingredients2recipe.grid(row=2, column=1, sticky="w", columnspan=2, rowspan=2)
+        table_ingredients2recipe.grid(row=2, column=1, sticky="nw", columnspan=2, rowspan=2)
 
         """Todos los Entrys"""
         entry_name = Entry(self.details_top,
@@ -689,7 +684,7 @@ class MiApp:
                                          P[0].isnumeric() and len(P) <= 3) else False), "%P"),
                              width=4)
 
-        entry_profit.grid(row=4, column=1, sticky="ne", padx=12)
+        entry_profit.grid(row=4, column=1, sticky="e", padx=12)
 
         """Todos los bind command"""
         table_ingredients2recipe.bind('<ButtonRelease-1>', __on_table_click__)
@@ -721,12 +716,210 @@ class MiApp:
         view_with_packaging.grid(row=2, column=3, sticky="", columnspan=2, padx=3)
         self.details_top.protocol("WM_DELETE_WINDOW", __close__)
 
+    def add_recipe(self):
+        self.details_top = Toplevel(self.master)
+        self.details_top.title("Añadir Receta")
+        self.details_top.iconbitmap("ph_icon.ico")
+        self.details_top.config(bg="white")
+        __set_middle__(self.details_top)
+        self.details_top.rowconfigure(0, minsize=12)  # Espacios
+        self.details_top.rowconfigure(1, minsize=54)
+        self.details_top.rowconfigure(2, weight=9)
+        self.details_top.rowconfigure(3, weight=3)
+        self.details_top.rowconfigure(4, weight=3)
+        self.details_top.rowconfigure(5, minsize=2)  # Espacios
+        self.details_top.columnconfigure(0, minsize=12)  # Espacios
+        self.details_top.columnconfigure(1, minsize=80)
+        self.details_top.columnconfigure(2, weight=3)
+        self.details_top.columnconfigure(3, minsize=12)
+        
+        """Todos los labels"""
+        Label(self.details_top, text="   ID ", bg="white").grid(
+            row=1, column=1, sticky="nw")
+
+        # === Label de Nombre de la receta
+        Label(self.details_top, text="   NOMBRE ", bg="white").grid(
+            row=1, column=1, sticky="ne", padx=38)
+
+        # === Label Ingredientes de la receta
+        Label(self.details_top, text="INGREDIENTES DE LA RECETA ", bg="white").grid(
+            row=2, column=1, sticky="ne")
+
+        # === Label Beneficio
+        Label(self.details_top, text="BENEFICIO",
+              bg="white").grid(row=1, column=2, sticky="ne")
+
+        # === Label Beneficios $
+        
+        Label(self.details_top, text="UNIDADES", bg="white").grid(
+            row=1, column=2, sticky="nw")
+
+        # TABLE INGREDIENT2RECIPE
+        table_ingredients2recipe = ttk.Treeview(self.details_top)
+        table_ingredients2recipe['columns'] = ('id',
+                                               'name',
+                                               'quantity',
+                                               'delete')
+        table_ingredients2recipe.column('#0', width=0, stretch=NO)
+        table_ingredients2recipe.column('id', width=36, anchor=CENTER)
+        table_ingredients2recipe.column('name', width=112, anchor=CENTER)
+        table_ingredients2recipe.column('quantity', width=72, anchor=CENTER)
+        table_ingredients2recipe.column('delete', width=24, anchor=CENTER)
+        table_ingredients2recipe.heading("id", text="ID")
+        table_ingredients2recipe.heading("name", text="Nombre")
+        table_ingredients2recipe.heading("quantity", text="Cantidad")
+        table_ingredients2recipe.grid(row=2, column=1, sticky="sw", columnspan=2, rowspan=2)
+        
+        Button(self.details_top, text="Añadir \nMateria\n Prima\n a la Receta", command=self.add_ingredient2recipe).grid(row=2, column=2, columnspan=2 , sticky="se", padx= 5)
+        self.details_top.protocol("WM_DELETE_WINDOW", self.details_top.destroy)
+
+    """Funcion añadir ingrediente a la receta"""
+    def add_ingredient2recipe(self):
+        tl_ingredient2recipe = Toplevel(self.details_top)
+        tl_ingredient2recipe.title("Añadir Ingrediente a la Receta")
+        tl_ingredient2recipe.iconbitmap("ph_icon.ico")
+        tl_ingredient2recipe.config(bg="white")
+        __set_middle__(tl_ingredient2recipe)
+        tl_ingredient2recipe.rowconfigure(0, minsize=12)
+        tl_ingredient2recipe.rowconfigure(1, weight=1)
+        tl_ingredient2recipe.rowconfigure(3, minsize=12)
+        tl_ingredient2recipe.columnconfigure(0, minsize=12)
+        tl_ingredient2recipe.columnconfigure(1, weight=2)
+        tl_ingredient2recipe.columnconfigure(2, weight=1)
+        tl_ingredient2recipe.columnconfigure(3, minsize=12)
+        
+        def __on_key_fname__(event):
+            content = entry_filter_name.get()
+            try:
+                entry_filter_name.delete(0, END)
+                entry_filter_id.delete(0, END)
+                entry_filter_name.insert(0, f"{content[0].upper()}{content[1::].lower()}")
+            except IndexError:
+                entry_filter_name.insert(0, content)
+            finally:
+                self.__packaging_table__(filter_by_name=content)
+
+        def __on_key_fid__(event):
+            content = entry_filter_id.get()
+            entry_filter_name.delete(0, END)
+            self.__packaging_table__(filter_by_id=content)
+        
+        def __on_table_click__(event):
+            try:
+                col = table_ingredient.identify_column(event.x)
+                ingredient_id = table_ingredient.item(
+                    table_ingredient.selection()[0], 'values')[0]
+                ingredient_name = table_ingredient.item(
+                    table_ingredient.selection()[0], 'values')[1]
+                match col:
+                    case '#4':
+                        def __on_key_amount__(event):
+                            content = entry_value.get()
+                            if event.keysym.isnumeric():
+                                match len(content):
+                                    case 2:
+                                        entry_value.delete(0, END)
+                                        entry_value.insert(0, f"{content}.0")
+                                    case 4:
+                                        entry_value.delete(0, END)
+                                        entry_value.insert(0, f"{content[:3:]}{event.keysym}")
+                            elif event.keysym == "period" and len(content) == 1:
+                                entry_value.delete(0, END)
+                                entry_value.insert(0, f"0.")
+                            elif event.keysym == "BackSpace":
+                                if len(content) > 0:
+                                    content_r = len(content) - 1
+                                    entry_value.delete(0, END)
+                                    entry_value.insert(0, f"{content[:content_r:]}")
+                            elif event.keysym == "Return":
+                                __func_button_confirm__()
+                            elif event.keysym == "Escape":
+                                response.destroy()
+
+                        def __func_button_confirm__():
+                            try:
+                                amount = float(entry_value.get())
+                                DBM.mdf_amount_ingredient2recipe(recipe_name, ingredient_name, amount)
+                                response.destroy()
+                                __ingredient2recipe_table__()
+                            except ValueError:
+                                pass
+                            except Exception as e:
+                                print(type(e).__name__)
+                                pass
+                        
+                        response = Toplevel(tl_ingredient2recipe)
+                        response.title("")
+                        response.iconbitmap("ph_icon.ico")
+                        response.config(bg="white")
+                        __set_middle__(response)
+                        response.rowconfigure(0, weight=5)
+                        response.rowconfigure(1, weight=2)
+                        response.columnconfigure(0, weight=2)
+                        Label(response,
+                              text=f" Definir cantidad de \n   {ingredient_name}").grid(
+                            row=0, column=0, sticky="n", pady=2)
+                        entry_value = Entry(response,
+                                            validate="key",
+                                            validatecommand=(self.details_top.register(
+                                                lambda P: True if P == "" or (
+                                                        not P.isalpha()
+                                                        and len(P) <= 4) else False), "%P"),
+                                            width=5)
+                        entry_value.grid(row=0, column=0, sticky="s")
+                        confirm_button = Button(response,
+                                                text="Confirmar Cambio",
+                                                command=__func_button_confirm__)
+                        confirm_button.grid(row=1, column=0, sticky="")
+                        entry_value.bind("<KeyRelease>", __on_key_amount__)
+                        
+                        
+            except IndexError:
+                pass
+        
+        table_ingredient = ttk.Treeview(tl_ingredient2recipe)
+        table_ingredient['columns'] = ('id', 'name', 'type', 'add')
+        table_ingredient.column('#0', width=0, stretch=NO)
+        table_ingredient.column('id', width=36, anchor=CENTER)
+        table_ingredient.column('name', width=112, anchor=CENTER)
+        table_ingredient.column('type', width=72, anchor=CENTER)
+        table_ingredient.column('add', width=24, anchor=CENTER)
+        table_ingredient.heading('id', text="ID")
+        table_ingredient.heading('name', text="Nombre")
+        table_ingredient.heading('type', text="Medida")
+        table_ingredient.grid(row= 1, column=1,rowspan=2, columnspan=2, sticky="w")
+        
+        Label(tl_ingredient2recipe, bg='white', text="  ID").grid(row=1, column=1, sticky="nw", padx= 5)
+        Label(tl_ingredient2recipe, bg='white', text="NOMBRE").grid(row=1, column=1, sticky="ne", padx=62)
+        
+        
+        entry_filter_id = Entry(tl_ingredient2recipe,
+                          validate="key",
+                          validatecommand=(tl_ingredient2recipe.register(
+                                lambda P: True if P == "" or (
+                                        P.isdigit()
+                                        and len(P) <= 3) else False), "%P"),
+                          width=5)
+        entry_filter_name = Entry(tl_ingredient2recipe,
+                            validate="key",
+                            validatecommand=(tl_ingredient2recipe.register(
+                                lambda P: True if P == "" or len(P) <= 32
+                                else False), "%P"),
+                            width=25)
+        entry_filter_id.grid(row=1, column=1, sticky="nw",padx=5, pady=24)
+        entry_filter_name.grid(row=1, column=1, sticky="ne", pady=24)
+        
+        table_ingredient.bind('<ButtonRelease-1>', __on_table_click__)
+        entry_filter_id.bind("<KeyRelease>", __on_key_fid__)
+        entry_filter_name.bind("<KeyRelease>", __on_key_fname__)
+        
+
     def __recipe_table__(self, filter_by_id: int = None, filter_by_name: str = None):
         for row in self.table.get_children():
             self.table.delete(row)
             
         if filter_by_id:
-            recipes = DBM.session.query(Recipes).filter(Recipes.id.like(f"{filter_by_id}%")).all()
+            recipes = DBM.session.query(Recipes).filter(Recipes.id.like(f"%{filter_by_id}%")).all()
         elif filter_by_name:
             recipes = DBM.query_get_recipe(filter_by_name, everything=True)
         else:
@@ -773,6 +966,7 @@ class MiApp:
 def main():
     MiApp(root)
     root.mainloop()
+    
 
 
 if __name__ == '__main__':
