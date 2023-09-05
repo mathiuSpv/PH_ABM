@@ -1,8 +1,12 @@
 from tkinter import *
-from tkinter import Tk, ttk, messagebox
+from tkinter import Tk, ttk
 from ttkthemes import ThemedTk
 from PIL import Image, ImageTk
-from sql_ph import DBM, Recipes, Ingredients, Packagings
+from sql_ph import DBM, Recipes, Ingredients, Packagings, IngredientsRecipes
+
+restart_color = "#2C9CF5"
+confirm_color = "#07D63D"
+decline_color = "#E32714"
 
 root = ThemedTk(theme="breeze")
 position_right = int((root.winfo_screenwidth() * (1 / 5)))
@@ -25,7 +29,7 @@ def clear_root():
 def window_format(windows_object,
                   geometry_size: str = "180x110",
                   padx: int = 0, pady: int = 0,
-                  resizable = False, grab_set = False):
+                  resizable=False, grab_set=False):
     window_width = windows_object.winfo_reqwidth()
     window_height = windows_object.winfo_reqheight()
     position_t_right = int(position_right + (window_height / 1))
@@ -67,7 +71,7 @@ def custom_confirm(windows, text: str = ""):
     response.rowconfigure(1, weight=1)
     response.columnconfigure(0, weight=2)
     Label(response,
-        text=text).grid(
+          text=text).grid(
         row=0, column=0, sticky="nwse", pady=2)
     yes = Button(response, bg="white", text="Si", padx=12, pady=2)
     no = Button(response, bg="white", text="No", padx=12, pady=2)
@@ -84,53 +88,63 @@ def custom_amount(windows, text: str = "", max_int: int = 2):
             if array_long == max_int:
                 entry_value.delete(0, END)
                 entry_value.insert(0, f"{content}.0")
-            elif array_long == max_int+2:
+            elif array_long == max_int + 2:
                 entry_value.delete(0, END)
-                entry_value.insert(0, f"{content[:max_int+1:]}{event.keysym}")
+                entry_value.insert(0, f"{content[:max_int:]}.{event.keysym}")
+            elif array_long > max_int and content[max_int] != ".":
+                entry_value.delete(0, END)
+                entry_value.insert(0, f"{content[:max_int:]}.{content[max_int::]}")
         elif event.keysym == "period" and len(content) == 1:
             entry_value.delete(0, END)
             entry_value.insert(0, f"0.")
-        elif event.keysym == "BackSpace":
-            if len(content) > 0:
-                content_r = len(content) - 1
-                entry_value.delete(0, END)
-                entry_value.insert(0, f"{content[:content_r:]}")
+        elif event.keysym == "BackSpace" and len(content) > 0 and content[len(content) - 1] == ".":
+            entry_value.delete(0, END)
+            entry_value.insert(0, f"{content[:len(content) - 1:]}")
         elif event.keysym == "Return":
-            if isinstance(content, float) or isinstance(content, int):
-                response.destroy()
-            else:
-                Label(response, text="Valor invalido", foreground='red'
-                    ).grid(row=0, column=0, sticky="s", pady=2)
+            confirm_verification()
         elif event.keysym == "Escape":
+            entry_value.delete(0, END)
             response.destroy()
-            
+
+    def confirm_verification():
+        try:
+            value = float(entry_value.get())
+            entry_value.delete(0, END)
+            entry_value.insert(0, f"{value}")
+            response.destroy()
+        except ValueError:
+            Label(response, text="Valor invalido", foreground='red'
+                  ).grid(row=0, column=0, sticky="s", pady=4)
+
     response = Toplevel(windows)
     response.title("")
     response.iconbitmap('ph_icon.ico')
-    window_format(response, geometry_size="180x105", padx=100, pady=40, resizable=True, grab_set=True)
-    response.rowconfigure(0, weight=5)
+    window_format(response, geometry_size="200x115", padx=100, pady=40, resizable=True, grab_set=True)
+    response.rowconfigure(0, weight=2)
     response.rowconfigure(1, weight=2)
     response.columnconfigure(0, weight=2)
-    Label(response,text=text).grid(row=0, column=0, sticky="n", pady=2)
-    
+    Label(response, text=text).grid(row=0, column=0, sticky="n", pady=2)
+
     Button(response,
-            text="Confirmar Cambio",
-            command= on_amount).grid(row=1, column=0, sticky="s")
+           text="Confirmar Cambio",
+           command=confirm_verification).grid(row=1, column=0, sticky="s", pady=2)
     entry_value = Entry(response,
                         validate="key",
                         validatecommand=(windows.register(
                             lambda P: True if P == "" or (
                                     not P.isalpha()
-                                    and len(P) <= max_int+2) else False), "%P"),
+                                    and len(P) <= max_int + 2) else False), "%P"),
                         width=5)
-    
+
+    entry_value.focus_set()
     entry_value.grid(row=1, column=0, sticky="n")
     entry_value.bind("<KeyRelease>", on_amount)
     return response, entry_value
 
+
 class mainRoot:
     def __init__(self):
-        self.show()
+        pass
 
     def show(self):
         """Vision completa"""
@@ -164,63 +178,74 @@ class mainRoot:
                ).grid(row=1, column=2, sticky="s", pady=10)
 
 
-def root_config():
-    root.geometry("900x480")
-    root.iconbitmap(r"ph_icon.ico")
-    root.rowconfigure(0, minsize=20)
-    root.rowconfigure(1, weight=2)
-    root.rowconfigure(2, weight=2)
-    root.rowconfigure(3, weight=1)
-    root.rowconfigure(4, weight=8)
-    root.rowconfigure(5, weight=3)
-    root.columnconfigure(0, minsize=10)
-    root.columnconfigure(1, weight=1)
-    root.columnconfigure(2, weight=6)
-    root.columnconfigure(3, weight=3)
-    root.columnconfigure(4, minsize=10)
+def on_key_profit(event, entry):
+    content = entry.get()
+    array_long = len(content)
+    if event.keysym.isnumeric():
+        match array_long:
+            case 3:
+                entry.delete(0, END)
+                entry.insert(0, f"{content[0]}.{event.keysym}")
+            case 2:
+                entry.delete(0, END)
+                entry.insert(0, f"{content[0]}.{event.keysym}")
+            case 1:
+                entry.delete(0, END)
+                entry.insert(0, f"{content[0]}.")
+    elif event.keysym == "BackSpace":
+        match array_long:
+            case 2:
+                entry.delete(0, END)
+                entry.insert(0, f"{content[0]}")
+            case 1:
+                entry.delete(0, END)
+    elif event.keysym == "period":
+        match array_long:
+            case 3:
+                entry.delete(0, END)
+                entry.insert(0, f"{content[0]}.0")
+    else:
+        index = content.rfind(event.char)
+        if index >= 0:
+            entry.delete(0, END)
+            entry.insert(0, f"{content[:index:]}")
+
+
+def on_key_name(event, entry: Entry):
+    content = entry.get()
+    try:
+        entry.delete(0, END)
+        entry.insert(0, f"{content[0].upper()}{content[1::].lower()}")
+    except IndexError:
+        entry.insert(0, content)
 
 
 class Section:
     def __init__(self):
+        self.root = root
         self.table = None
         self.details = None
-    
+
+    def root_config(self):
+        self.root.geometry("900x480")
+        self.root.iconbitmap(r"ph_icon.ico")
+        self.root.rowconfigure(0, minsize=20)
+        self.root.rowconfigure(1, weight=2)
+        self.root.rowconfigure(2, weight=2)
+        self.root.rowconfigure(3, weight=1)
+        self.root.rowconfigure(4, weight=8)
+        self.root.rowconfigure(5, weight=3)
+        self.root.columnconfigure(0, minsize=10)
+        self.root.columnconfigure(1, weight=1)
+        self.root.columnconfigure(2, weight=6)
+        self.root.columnconfigure(3, weight=3)
+        self.root.columnconfigure(4, minsize=10)
+
     def on_table_click(self, event):
         col = self.table.identify_column(event.x)
         _id = self.table.item(self.table.selection()[0], "values")[0]
         _name = self.table.item(self.table.selection()[0], "values")[1]
         return col, _id, _name
-    
-    def on_key_profit(self, event, entry):
-        content = entry.get()
-        if event.keysym.isnumeric():
-            match len(content):
-                case 3:
-                    entry.delete(0, END)
-                    entry.insert(0, f"{content[0]}.{event.keysym}")
-                case 2:
-                    entry.delete(0, END)
-                    entry.insert(0, f"{content[0]}.{event.keysym}")
-                case 1:
-                    entry.delete(0, END)
-                    entry.insert(0, f"{content[0]}.")
-        elif event.keysym == "BackSpace":
-            match len(content):
-                case 2:
-                    entry.delete(0, END)
-                    entry.insert(0, f"{content[0]}")
-                case 1:
-                    entry.delete(0, END)
-    
-    def on_key_name(self, event, entry: Entry):
-            content = entry.get()
-            try:
-                entry.delete(0, END)
-                entry.insert(0, f"{content[0].upper()}{content[1::].lower()}")
-            except IndexError:
-                entry.insert(0, content)
-    
-    
 
 
 class recipesRoot(Section):
@@ -229,7 +254,7 @@ class recipesRoot(Section):
 
     def show(self):
         # CONFIGURACION
-        root_config()
+        self.root_config()
         root.title("PH ABM - Recetas")
 
         # FUNCIONES
@@ -253,7 +278,7 @@ class recipesRoot(Section):
 
             for recipe in param:
                 recipe_row = (recipe.id, recipe.name,
-                              recipe.price_for_unit(), recipe.units,
+                              round(recipe.price_for_unit(), 2), recipe.units,
                               "📝", " 🗑️")
                 self.table.insert("", "end", values=recipe_row)
 
@@ -272,10 +297,9 @@ class recipesRoot(Section):
 
             _id = filter_by_id()
             _name = filter_by_name()
-            qr= None
             if _id and _name:
                 qr = DBM.session.query(Recipes).filter(Recipes.id.like(f"%{_id}%")
-                                                      ).filter(Recipes.name.like(f"%{_name}%")).all()
+                                                       ).filter(Recipes.name.like(f"%{_name}%")).all()
             elif _id:
                 qr = DBM.session.query(Recipes).filter(Recipes.id.like(f"%{_id}%")).all()
             elif _name:
@@ -292,16 +316,18 @@ class recipesRoot(Section):
                     self.details_recipe(qr)
                 elif col == "#6":
                     response, yes, no = custom_confirm(root,
-                                    text=f"¿ Eliminar {recipe_id} - {recipe_name} ?")
-                    yes.config(command= lambda:(DBM.del_recipe(recipe_name), response.destroy()))
-                    no.config(command= lambda:response.destroy())
+                                                       text=f"¿ Eliminar {recipe_id} - {recipe_name} ?")
+                    yes.config(command=lambda: (DBM.del_recipe(recipe_name), response.destroy()))
+                    no.config(command=lambda: response.destroy())
+
                     def response_destroy(event):
-                        qr = DBM.query_get_all_recipes()
-                        table_recipe_insert(qr)
+                        update = DBM.query_get_all_recipes()
+                        table_recipe_insert(update)
+
                     response.bind("<Destroy>", response_destroy)
             except IndexError:
                 pass
-        
+
         # ENTRY Y BOTONES
         global photo
         logo_frame = Frame(root, bg="white")
@@ -337,8 +363,9 @@ class recipesRoot(Section):
         entry_id.grid(row=2, column=2, sticky="sw", padx=10, pady=5)
         entry_name.grid(row=2, column=2, sticky="sw", padx=80, pady=5)
         add_recipe.grid(row=3, column=3, sticky="s")
-        Button(root, bg="white", text="♻", width=8, height=1,
-               command=lambda: (entry_id.delete(0, END), entry_name.delete(0, END), table_recipe_insert(DBM.query_get_all_recipes()))
+        Button(root, bg="white", text="♻", background=restart_color, fg="white", width=8, height=1,
+               command=lambda: (
+                   entry_id.delete(0, END), entry_name.delete(0, END), table_recipe_insert(DBM.query_get_all_recipes()))
                ).grid(row=2, column=2, sticky="se", padx=240, pady=3)
         Button(root, bg="white", text="Volver a Inicio", width=16, height=1,
                command=go2main).grid(row=1, column=2, columnspan=2, sticky="w", padx=5)
@@ -357,20 +384,19 @@ class recipesRoot(Section):
         self.details.title("Detalles de la receta")
         self.details.iconbitmap("ph_icon.ico")
         self.details.config(bg="white")
-        window_format(self.details, geometry_size="390x390", resizable=True, grab_set=True)
-        self.details.rowconfigure(0, minsize=8)
-        self.details.rowconfigure(1, weight=2)
-        self.details.rowconfigure(2, weight=1)
-        self.details.rowconfigure(3, weight=9)
-        self.details.rowconfigure(4, weight=2)
-        self.details.rowconfigure(5, weight=4)
-        self.details.rowconfigure(6, minsize=8)
-        self.details.columnconfigure(0, minsize=8)  
+        window_format(self.details, geometry_size="400x400", resizable=True, grab_set=True)
+        self.details.rowconfigure(0, minsize=4)
+        self.details.rowconfigure(1, minsize=24)
+        self.details.rowconfigure(2, minsize=20)
+        self.details.rowconfigure(3, minsize=200)
+        self.details.rowconfigure(4, minsize=80)
+        self.details.rowconfigure(5, minsize=2)
+        self.details.columnconfigure(0, minsize=4)
         self.details.columnconfigure(1, minsize=80)
-        self.details.columnconfigure(2, weight=3)
-        self.details.columnconfigure(3, weight=2)
-        self.details.columnconfigure(4, minsize=8)
-        
+        self.details.columnconfigure(2, weight=180)
+        self.details.columnconfigure(3, weight=120)
+        self.details.columnconfigure(4, minsize=2)
+
         # FUNCIONES
         def profit_price():
             try:
@@ -382,14 +408,14 @@ class recipesRoot(Section):
             except Exception as e:
                 print(type(e).__name__, e)
                 profit = recipe.profit
-            profit_msg = f"         BENEFICIO $ {round(recipe.total_cost() * profit, 1)}"
+            profit_msg = f"PRECIO DE VENTA $ {round(recipe.total_cost() * profit, 1)}"
             if recipe.units != 1:
                 profit_cu = round((recipe.total_cost() * profit) / recipe.units, 1)
-                profit_cu_msg = f"\nBENEFICIO C/U $ {profit_cu}"
+                profit_cu_msg = f"\n             X UNIDAD $ {profit_cu}"
             else:
                 profit_cu_msg = ""
             return profit_msg + profit_cu_msg
-        
+
         def db_values():
             entry_name.delete(0, END)
             entry_units.delete(0, END)
@@ -398,7 +424,7 @@ class recipesRoot(Section):
             entry_name.insert(0, f"{recipe.name}")
             entry_units.insert(0, f"{recipe.units}")
             entry_profit.insert(0, f"{recipe.profit}")
-            
+
         def table_recipe2ingredient_insert():
             for row in table_ingredients2recipe.get_children():
                 table_ingredients2recipe.delete(row)
@@ -406,37 +432,60 @@ class recipesRoot(Section):
             ingredients2recipe = DBM.query_get_all_ingredients2recipe(recipe.name)
             for ingredient, ingredient_amount in ingredients2recipe:
                 ingredient_row = (ingredient.id, ingredient.name,
-                                f"{ingredient_amount}{ingredient.unit_type}",
-                                "📝", " 🗑️")
+                                  f"{ingredient_amount}{ingredient.unit_type}",
+                                  "📝", " 🗑️")
                 table_ingredients2recipe.insert(parent='', index='end', values=ingredient_row)
             label_total_cost.config(text=f"COSTO TOTAL $ {recipe.total_cost()}")
             profit_label.config(text=profit_price())
-            
+
         def on_table(event):
             try:
                 col = table_ingredients2recipe.identify_column(event.x)
                 ingredient_id = table_ingredients2recipe.item(table_ingredients2recipe.selection()[0], "values")[0]
                 ingredients_name = table_ingredients2recipe.item(table_ingredients2recipe.selection()[0], "values")[1]
                 if col == "#4":
-                    def response_destroy(event):
-                        if value.get():
-                            print(value)
-                            DBM.mdf_amount_ingredient2recipe(recipe.name, ingredients_name, value.get())
-                        pass
-                    
                     response, value = custom_amount(self.details,
-                                                   text=f"Cambiar cantidad:\n{ingredients_name} en {recipe.name}")
-                    response.bind("<Destroy>", response_destroy)        
-                    
+                                                    text=f"Cambiar cantidad:\n{ingredients_name} en {recipe.name}")
 
+                    def response_destroy(event):
+                        try:
+                            amount = float(value.get())
+                            DBM.mdf_amount_ingredient2recipe(recipe.name, ingredients_name, amount)
+                        except TclError:
+                            pass
+                        except ValueError:
+                            pass
+                        finally:
+                            table_recipe2ingredient_insert()
+
+                    response.bind("<Destroy>", response_destroy)
                 elif col == "#5":
-                    pass
+                    response, yes, no = custom_confirm(self.details,
+                                                       text=f"Eliminar:\n{ingredients_name} en {recipe.name}")
+                    yes.config(command=lambda: (DBM.remove_ingredient2recipe(recipe.name, ingredients_name),
+                                                response.destroy()))
+                    no.config(command=lambda: response.destroy())
+
+                    def response_destroy(event):
+                        table_recipe2ingredient_insert()
+
+                    response.bind("<Destroy>", response_destroy)
+
             except IndexError:
                 pass
-                
-            
 
-        
+        def on_profit(event, entry: Entry):
+            on_key_profit(event, entry)
+            profit_label.config(text=profit_price())
+
+        def add_ingredient2recipe_button():
+            ingredients_array = DBM.session.query(Ingredients).filter(
+                                ~Ingredients.id.in_([Ingredients.id for b in recipe.ingredients])
+                            ).all()
+            """session.query(B).filter(~session.query(C).filter(C.a_id == elea.id).exists())"""
+            for ingredients in DBM.query_get_all_ingredients():
+                print(ingredients.name)
+
         # ENTRY Y BOTONES
         entry_name = Entry(self.details,
                            validate="key",
@@ -472,7 +521,9 @@ class recipesRoot(Section):
         table_ingredients2recipe.heading("id", text="ID")
         table_ingredients2recipe.heading("name", text="Ingredientes")
         table_ingredients2recipe.heading("quantity", text="Cantidad")
-        
+        button_add_ingredient2recipe = Button(self.details, text="Añadir\nMateria Prima",
+                                              command=add_ingredient2recipe_button)
+
         # GRIDS Y BINDS
         Label(self.details, text="ID", bg="white"
               ).grid(row=1, column=1, sticky="w", padx=12)
@@ -483,21 +534,22 @@ class recipesRoot(Section):
         Label(self.details, text="UNIDADES", bg="white"
               ).grid(row=1, column=2, sticky="w")
         Label(self.details, text="X BENEFICIO", bg="white"
-              ).grid(row=5, column=1, sticky="e", padx=50)
-        
+              ).grid(row=4, column=1, sticky="e", padx=50)
+
         entry_name.grid(row=2, column=1, sticky="ne", padx=16)
         entry_units.grid(row=2, column=2, sticky="nw", padx=26)
-        entry_profit.grid(row=5, column=1, sticky="e", padx=12)
-        label_total_cost.grid(row=3, column=1, rowspan=2, sticky="se")
-        profit_label.grid(row=5, column=2, columnspan=2, sticky="w")
-        table_ingredients2recipe.grid(row=3, column=1, sticky="nw", columnspan=2, rowspan=2)
+        entry_profit.grid(row=4, column=1, sticky="e", padx=12)
+        label_total_cost.grid(row=4, column=1, rowspan=2, sticky="ne")
+        profit_label.grid(row=4, column=2, columnspan=2, sticky="w")
+        table_ingredients2recipe.grid(row=3, column=1, sticky="w", columnspan=2, pady=4)
+        button_add_ingredient2recipe.grid(row=3, column=3, sticky="n", padx=4, pady=42)
+
         table_ingredients2recipe.bind('<ButtonRelease-1>', on_table)
-        entry_name.bind("<KeyRelease>", self.on_key_name)
-        entry_profit.bind("<KeyRelease>", self.on_key_profit)
+        entry_name.bind("<KeyRelease>", lambda event: on_key_name(event, entry=entry_name))
+        entry_profit.bind("<KeyRelease>", lambda event: on_profit(event, entry=entry_profit))
         db_values()
         table_recipe2ingredient_insert()
-        
-        
+
 
 class ingredientsRoot(Section):
     """PANTALLA DE INGREDIENTES CON SUS FUNCIONALIDADES"""
@@ -507,7 +559,7 @@ class ingredientsRoot(Section):
 
     def show(self):
         # CONFIGURACION
-        root_config()
+        self.root_config()
         root.title("PH ABM - Materia Prima")
 
         # ENTRY Y BOTONES
@@ -575,7 +627,7 @@ class packagingsRoot(Section):
 
     def show(self):
         # CONFIGURACION
-        root_config()
+        self.root_config()
         root.title("PH ABM - Material de Empaque")
 
         # ENTRYS Y BOTONES
@@ -636,12 +688,13 @@ class packagingsRoot(Section):
         go_ingredient.grid(row=1, column=2, columnspan=2, sticky="w", padx=150 * 2)
 
 
-# main_section = mainRoot()
+main_section = mainRoot()
+# main_section.show()
 recipes_section = recipesRoot()
 ingredients_section = ingredientsRoot()
 packagings_section = packagingsRoot()
 if __name__ == "__main__":
-    recipes_section.details_recipe(DBM.query_get_recipe("Torta"))
+    recipes_section.details_recipe(DBM.query_get_recipe("Alfajores"))
     pass
 
 root.mainloop()
