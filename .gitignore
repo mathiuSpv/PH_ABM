@@ -1,4 +1,7 @@
-venv/
-venv\
+#CARPETAS  
+venv
+__pycache__
+
+#ACHIVOS
 test.py
 dbm_previus.txt
